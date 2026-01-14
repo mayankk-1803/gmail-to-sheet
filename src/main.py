@@ -1,3 +1,4 @@
+import time
 from src.auth import get_credentials
 from src.gmail_service import get_gmail_service
 from src.sheets_service import append_rows
@@ -5,16 +6,16 @@ from src.email_parser import parse_email
 from src.config import SPREADSHEET_ID
 
 
-
-
 def main():
     credentials = get_credentials()
     gmail = get_gmail_service(credentials)
 
-    # Fetch only unread inbox emails
+    # Only emails from last 24 hours
+    one_day_ago = int(time.time()) - (24 * 60 * 60)
+
     response = gmail.users().messages().list(
         userId="me",
-        q="is:unread in:inbox"
+        q=f"is:unread in:inbox after:{one_day_ago}"
     ).execute()
 
     messages = response.get("messages", [])
@@ -29,14 +30,20 @@ def main():
 
         email = parse_email(msg)
 
+        # Exclude automated / no-reply emails
+        sender = email["from"].lower()
+        if "no-reply" in sender or "noreply" in sender:
+            continue
+
         sheet_rows.append([
             email["from"],
             email["subject"],
             email["date"],
-            email["content"]
+            email["content"],
+            email["labels"]
         ])
 
-        # Mark email as read after processing
+        # Mark email as read
         gmail.users().messages().modify(
             userId="me",
             id=item["id"],
@@ -47,7 +54,7 @@ def main():
         append_rows(credentials, SPREADSHEET_ID, sheet_rows)
         print(f"{len(sheet_rows)} emails logged successfully.")
     else:
-        print("No unread emails to process.")
+        print("No qualifying emails found.")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ def append_rows(credentials, spreadsheet_id, rows):
 
     service.spreadsheets().values().append(
         spreadsheetId=spreadsheet_id,
-        range="Sheet1!A:D",
+        range="Sheet1!A:E",  # 5 columns now
         valueInputOption="RAW",
         body={"values": rows}
     ).execute()

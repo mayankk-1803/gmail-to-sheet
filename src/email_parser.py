@@ -1,6 +1,6 @@
 import base64
 
-MAX_CONTENT_LENGTH = 10000  # keep safely under Google Sheets limit
+MAX_CONTENT_LENGTH = 10000
 
 
 def parse_email(message):
@@ -13,7 +13,6 @@ def parse_email(message):
     body_text = ""
     payload = message["payload"]
 
-    # Handle multipart emails
     if "parts" in payload:
         for part in payload["parts"]:
             if part["mimeType"] == "text/plain" and part["body"].get("data"):
@@ -27,13 +26,17 @@ def parse_email(message):
                 payload["body"]["data"]
             ).decode("utf-8", errors="ignore")
 
-    # Trim long email bodies to avoid Google Sheets cell limit
     if len(body_text) > MAX_CONTENT_LENGTH:
         body_text = body_text[:MAX_CONTENT_LENGTH] + " ...[truncated]"
+
+    # Extract Gmail labels
+    labels = message.get("labelIds", [])
+    labels_text = ", ".join(labels)
 
     return {
         "from": header_map.get("From", ""),
         "subject": header_map.get("Subject", ""),
         "date": header_map.get("Date", ""),
-        "content": body_text.strip()
+        "content": body_text.strip(),
+        "labels": labels_text
     }
